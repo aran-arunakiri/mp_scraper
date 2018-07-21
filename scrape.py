@@ -104,7 +104,11 @@ def fetch_master_url(master_link, dir_name):
             print ("Element index " + str(elements.index(elm)))
             if 'url' not in elm:
                 continue
-            driver.get(elm['url'])
+            try:
+                driver.get(elm['url'])
+            except Exception as e:
+                print e
+                continue
             wait_by_id("vip-seller")
 
             image_paths = driver.find_elements_by_xpath(
