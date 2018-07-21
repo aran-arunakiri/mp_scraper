@@ -227,7 +227,12 @@ for brand_key in brand_dict:
         select_year.select_by_visible_text(str(min_year))
 
         driver.find_element_by_xpath("//input[@id='cars-search-button']").click()
-        fetch_master_url(driver.current_url, folder_name)
+        try:
+            fetch_master_url(driver.current_url, folder_name)
+        except Exception as e:
+            print 'coult not fetch ' + folder_name
+            print e
+            continue
 
 driver.quit()
 time_end = time.time()
