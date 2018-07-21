@@ -1,7 +1,7 @@
 ### PATH TO BROWSER
 import httplib
 
-path_to_browser = "chromedriver"
+path_to_browser = "/home/postsapien/scraper/mp_scraper/chromedriver"
 ###
 import hashlib
 import urllib
