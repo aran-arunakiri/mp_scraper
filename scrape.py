@@ -2,6 +2,7 @@
 import httplib
 
 path_to_browser = "/home/postsapien/scraper/mp_scraper/chromedriver"
+# path_to_browser = "./chromedriver"
 ###
 import hashlib
 import urllib
@@ -45,10 +46,7 @@ def wait_by_id(id_name):
         print "Too much time has passed."
 
 
-def fetch_master_url(master_link, folder_name):
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
+def fetch_master_url(master_link, dir_name):
     print 'fetching url ' + master_link
     driver.get(master_link)  # get the first page
     print 'url loaded 1'
@@ -56,7 +54,7 @@ def fetch_master_url(master_link, folder_name):
     print 'url loaded 2'
     # first see the general page link and the number of pages
     general_page_link = master_link
-    singlePage = False;
+    singlePage = False
     try:
         page_2_el = driver.find_element_by_xpath(
             "//span[@id='pagination-pages']/a[contains(@data-ga-track-event, 'gination')]")
@@ -111,6 +109,11 @@ def fetch_master_url(master_link, folder_name):
 
             image_paths = driver.find_elements_by_xpath(
                 "//div[@id='vip-image-viewer']/div[contains(@class, 'image ')]/img")
+            year = driver.find_element_by_xpath(
+                "//div[@id='car-attributes']/div[contains(@class, 'car-feature-table spec-table')]/div/div[2]/span[2]").text
+            new_dir_name = dir_name + "_" + year
+            if not os.path.exists(new_dir_name):
+                os.makedirs(new_dir_name)
 
             for i in image_paths:
                 url = i.get_attribute('src')
@@ -118,7 +121,7 @@ def fetch_master_url(master_link, folder_name):
                 filename = url.split('/')[-1]
                 extension = filename.split('.')[1].lower()
                 new_filename = hashlib.md5(url.encode()).hexdigest() + "." + extension
-                urllib.urlretrieve(i.get_attribute('src'), folder_name + "/" + new_filename)
+                urllib.urlretrieve(i.get_attribute('src'), new_dir_name + "/" + new_filename)
 
 
 options = Options()
@@ -130,25 +133,27 @@ driver = webdriver.Chrome(path_to_browser, chrome_options=options)
 # first handle cookies button
 driver.get("https://www.marktplaats.nl/")
 wait_by_class("page")
-print "Before click"
+print "before click"
 
 N_click_attempts = 0
 while 1:
     if N_click_attempts == 10:
         print "Something is wrong. "
         break
-    print "Try to click."
     N_click_attempts = N_click_attempts + 1
     try:
-        cook_button = WebDriverWait(driver, 15).until(
+        print "try to click."
+        cook_button = WebDriverWait(driver, 0.1).until(
             EC.element_to_be_clickable((By.XPATH, "//form[@method='post']/input[@type='submit']"))).click()
-        time.sleep(2.0)
-    except:
-        time.sleep(2.0)
+        time.sleep(0.5)
+    except Exception as e:
+        print 'click failed '
+        print e
+        time.sleep(0.5)
         break
 
 # cook_button = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, "//form[@method='post']/input[@type='submit']"))).click()
-print "After click"
+print "after click"
 # cook_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//form[@method='post']/input[@type='submit']"))).click()
 # cook_button.click()
 # driver.execute_script('arguments[0].click();', cook_button)
@@ -164,17 +169,15 @@ while 1:
 
 # now start scraping
 time_beg = time.time()
+
 driver.set_page_load_timeout(60)
 driver.get("https://www.marktplaats.nl/c/auto-s/c91.html")
 wait_by_id("cars-search-categories")
-
-# brands = driver.find_elements_by_xpath(
-#     "//div[@id='cars-search-categories']/optgroup[contains(@label, 'Populair ')]")
+min_year = 2000
 brands = driver.find_elements_by_xpath(
     "//div[@id='cars-search-categories']/select[@name='categoryId']/optgroup[@label='Populair']/option")
 
 brand_dict = {}
-cached_years = None
 print 'loading options'
 
 for brand in brands:
@@ -182,7 +185,7 @@ for brand in brands:
         if not brand.text:
             continue
         print brand.text
-        brand_dict[brand.text] = {}
+        brand_dict[brand.text] = []
         select = Select(driver.find_element_by_name('categoryId'))
         select.select_by_visible_text(brand.text)
         wait_by_id("cars-search-models")
@@ -193,34 +196,7 @@ for brand in brands:
                 if not model.text or model.text == "Model" or model.text == "Overige modellen":
                     continue
                 print model.text
-                brand_dict[brand.text][model.text] = []
-                if cached_years:
-                    print 'using cached years'
-                    brand_dict[brand.text][model.text] = cached_years
-                else:
-                    select = Select(driver.find_element_by_name('attributes'))
-                    select.select_by_visible_text(model.text)
-                    wait_by_id("cars-search-year-min")
-                    year_models = driver.find_elements_by_xpath("//div[@id='cars-search-year-min']/select/option")
-
-                    cached_years = []
-                    for year_model in year_models:
-                        try:
-                            if not year_model.text or year_model.text == "Bouwjaar (vanaf)":
-                                continue
-                            if int(year_model.text) < 2000:
-                                break
-                            print year_model.text
-                            brand_dict[brand.text][model.text].append(int(year_model.text))
-                            cached_years.append(int(year_model.text))
-                            # select = Select(driver.find_element_by_name('yearFrom'))
-                            # select.select_by_visible_text(year_model.text)
-                            # driver.find_element_by_xpath("//input[@id='cars-search-button']").click()
-                            # fetch_master_url(driver.current_url)
-                        except Exception as e:
-                            print e
-                            print year_model.text
-                            continue
+                brand_dict[brand.text].append(model.text)
             except Exception as e:
                 print e
                 print model.text
@@ -232,25 +208,26 @@ for brand in brands:
 
 print 'options loaded'
 for brand_key in brand_dict:
-    for model_key in brand_dict[brand_key]:
-        for model_year_val in brand_dict[brand_key][model_key]:
-            driver.get("https://www.marktplaats.nl/c/auto-s/c91.html")
-            wait_by_id("cars-search-categories")
-            folder_name = brand_key + '_' + model_key + '_' + str(model_year_val)
-            print folder_name
-            select_brand = Select(driver.find_element_by_name('categoryId'))
-            select_brand.select_by_visible_text(brand_key)
-            wait_by_id("cars-search-models")
+    print 'scraping brand ' + brand_key
+    for model_name in brand_dict[brand_key]:
+        print 'scraping model ' + model_name
+        driver.get("https://www.marktplaats.nl/c/auto-s/c91.html")
+        wait_by_id("cars-search-categories")
+        folder_name = 'data/' + brand_key + '_' + model_name
+        print folder_name
+        select_brand = Select(driver.find_element_by_name('categoryId'))
+        select_brand.select_by_visible_text(brand_key)
+        wait_by_id("cars-search-models")
 
-            select_model = Select(driver.find_element_by_name('attributes'))
-            select_model.select_by_visible_text(model_key)
-            wait_by_id("cars-search-year-min")
+        select_model = Select(driver.find_element_by_name('attributes'))
+        select_model.select_by_visible_text(model_name)
+        wait_by_id("cars-search-year-min")
 
-            select_year = Select(driver.find_element_by_name('yearFrom'))
-            select_year.select_by_visible_text(str(model_year_val))
+        select_year = Select(driver.find_element_by_name('yearFrom'))
+        select_year.select_by_visible_text(str(min_year))
 
-            driver.find_element_by_xpath("//input[@id='cars-search-button']").click()
-            fetch_master_url(driver.current_url, folder_name)
+        driver.find_element_by_xpath("//input[@id='cars-search-button']").click()
+        fetch_master_url(driver.current_url, folder_name)
 
 driver.quit()
 time_end = time.time()
