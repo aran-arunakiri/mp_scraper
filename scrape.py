@@ -38,6 +38,16 @@ def wait_by_class(class_name):
         print "Too much time has passed."
 
 
+def go_to_url(url):
+    try:
+        driver.get(url)
+        return
+    except Exception as e:
+        print 'something went wrong while fetching ' + url + ' retrying...'
+        time.sleep(TIME_PAUSE)
+        go_to_url(url)
+
+
 def wait_by_id(id_name):
     try:
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, id_name)))
@@ -147,13 +157,13 @@ while 1:
     N_click_attempts = N_click_attempts + 1
     try:
         print "try to click."
-        cook_button = WebDriverWait(driver, 0.1).until(
+        cook_button = WebDriverWait(driver, 15).until(
             EC.element_to_be_clickable((By.XPATH, "//form[@method='post']/input[@type='submit']"))).click()
-        time.sleep(0.5)
+        time.sleep(2.0)
     except Exception as e:
         print 'click failed '
         print e
-        time.sleep(0.5)
+        time.sleep(2.0)
         break
 
 # cook_button = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, "//form[@method='post']/input[@type='submit']"))).click()
@@ -174,7 +184,7 @@ while 1:
 # now start scraping
 time_beg = time.time()
 
-driver.set_page_load_timeout(60)
+driver.set_page_load_timeout(360)
 driver.get("https://www.marktplaats.nl/c/auto-s/c91.html")
 wait_by_id("cars-search-categories")
 min_year = 2000
@@ -215,7 +225,7 @@ for brand_key in brand_dict:
     print 'scraping brand ' + brand_key
     for model_name in brand_dict[brand_key]:
         print 'scraping model ' + model_name
-        driver.get("https://www.marktplaats.nl/c/auto-s/c91.html")
+        go_to_url("https://www.marktplaats.nl/c/auto-s/c91.html")
         wait_by_id("cars-search-categories")
         folder_name = 'data/' + brand_key + '_' + model_name
         print folder_name
@@ -234,7 +244,7 @@ for brand_key in brand_dict:
         try:
             fetch_master_url(driver.current_url, folder_name)
         except Exception as e:
-            print 'coult not fetch ' + folder_name
+            print 'could not fetch ' + folder_name
             print e
             continue
 
