@@ -110,7 +110,7 @@ def fetch_master_url(master_link, dir_name):
 
             elements.append(thiselm)
 
-        for elm in elements:  # get images
+        for elm in elements:
             print ("Element index " + str(elements.index(elm)))
             if 'url' not in elm:
                 continue
@@ -129,7 +129,7 @@ def fetch_master_url(master_link, dir_name):
             if not os.path.exists(new_dir_name):
                 os.makedirs(new_dir_name)
 
-            for i in image_paths:
+            for i in image_paths:  # get images
                 url = i.get_attribute('src')
                 print url
                 filename = url.split('/')[-1]
